@@ -77,11 +77,18 @@ const NEW_VOTES_SUBSCRIPTION = gql`
 
 class LinkList extends Component {
   _updateCacheAfterVote = (store, createVote, linkId) => {
-    const data = store.readQuery({ query: FEED_QUERY })
+    const isNewPage = this.props.location.pathname.includes('new')
+    const page = parseInt(this.props.match.params.page, 10)
   
+    const skip = isNewPage ? (page - 1) * LINKS_PER_PAGE : 0
+    const first = isNewPage ? LINKS_PER_PAGE : 100
+    const orderBy = isNewPage ? 'createdAt_DESC' : null
+    const data = store.readQuery({
+      query: FEED_QUERY,
+      variables: { first, skip, orderBy }
+    })
     const votedLink = data.feed.links.find(link => link.id === linkId)
     votedLink.votes = createVote.link.votes
-  
     store.writeQuery({ query: FEED_QUERY, data })
   }
 
@@ -129,6 +136,22 @@ class LinkList extends Component {
     const rankedLinks = data.feed.links.slice()
     rankedLinks.sort((l1, l2) => l2.votes.length - l1.votes.length)
     return rankedLinks
+  }
+
+  _nextPage = data => {
+    const page = parseInt(this.props.match.params.page, 10)
+    if (page <= data.feed.count / LINKS_PER_PAGE) {
+      const nextPage = page + 1
+      this.props.history.push(`/new/${nextPage}`)
+    }
+  }
+  
+  _previousPage = () => {
+    const page = parseInt(this.props.match.params.page, 10)
+    if (page > 1) {
+      const previousPage = page - 1
+      this.props.history.push(`/new/${previousPage}`)
+    }
   }
 
   render() {
